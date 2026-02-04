@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>🎡 لعبة عجلة الحظ</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(#6ec6ff, #e3f2fd);
+  text-align: center;
+  direction: rtl;
+}
+
+h2 {
+  margin-top: 20px;
+}
+
+#wheel {
+  margin: 40px auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: #fff;
+  border: 10px solid #ff9800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 50px;
+  transition: transform 2s ease-out;
+}
+
+button {
+  padding: 15px 40px;
+  font-size: 20px;
+  border: none;
+  border-radius: 10px;
+  background: #4caf50;
+  color: white;
+  cursor: pointer;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+#score {
+  font-size: 22px;
+  margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🎡 لعبة عجلة الحظ</h2>
+
+<div id="wheel">❓</div>
+
+<button onclick="spin()">لف العجلة</button>
+
+<div id="score">النقاط: 0</div>
+
+<script>
+let score = localStorage.getItem("score")
+  ? parseInt(localStorage.getItem("score"))
+  : 0;
+
+const wheel = document.getElementById("wheel");
+const scoreDiv = document.getElementById("score");
+
+scoreDiv.innerText = "النقاط: " + score;
+
+const prizes = [
+  { icon: "🍓", value: 5 },
+  { icon: "🐟", value: 15 },
+  { icon: "🍕", value: 25 },
+  { icon: "🥩", value: 10 },
+  { icon: "⭐", value: 45 }
+];
+
+let rotation = 0;
+
+function spin() {
+  const prize = prizes[Math.floor(Math.random() * prizes.length)];
+  rotation += 720 + Math.random() * 360;
+  wheel.style.transform = `rotate(${rotation}deg)`;
+
+  setTimeout(() => {
+    wheel.innerText = prize.icon;
+    score += prize.value;
+    localStorage.setItem("score", score);
+    scoreDiv.innerText = "النقاط: " + score;
+  }, 2000);
+}
+</script>
+
+</body>
+</html>
