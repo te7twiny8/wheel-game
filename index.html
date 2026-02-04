@@ -3,216 +3,120 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>🎰 Wheel Bet</title>
-
+<title>🎰 لعبة الرهان</title>
 <style>
 body{
-  margin:0;font-family:Arial;background:radial-gradient(circle,#1b1b1b,#000);
-  color:#fff;text-align:center;direction:rtl
+  margin:0;font-family:Arial;background:#1b1b1b;color:#fff;
+  text-align:center;direction:rtl
 }
-h2{margin:8px}
-#wheel{
-  margin:12px auto;width:220px;height:220px;border-radius:50%;
-  border:8px solid gold;background:#111;display:flex;align-items:center;
-  justify-content:center;font-size:48px;transition:transform 2s ease-out
+h2{margin:10px}
+.card{background:#111;margin:8px;padding:10px;border-radius:10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.item{
+  width:70px;height:70px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;cursor:pointer;border:2px solid #333
 }
-button,select{
-  font-size:14px;padding:8px 12px;margin:4px;border-radius:8px;border:none
+.item.active{border-color:gold;background:#222}
+button,input{
+  padding:8px 12px;border-radius:8px;border:none;font-size:14px
 }
 button{background:#ff9800;color:#000;font-weight:bold}
-.card{background:#111;margin:8px;padding:8px;border-radius:10px;font-size:13px}
-.win{color:#4caf50}.loss{color:#f44336}
-.row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
-.small{font-size:12px;opacity:.9}
-.modal{
-  position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center
-}
-.modal .box{background:#111;border-radius:12px;padding:12px;width:90%;max-width:360px}
-.skin{padding:6px 10px;border:1px solid #333;border-radius:8px;cursor:pointer}
-.active{border-color:gold}
 </style>
 </head>
 
 <body>
 
-<h2>🎰 Wheel Bet</h2>
+<h2>🎰 لعبة الرهان</h2>
 
 <div class="card">
-💰 كوينز: <b id="coins">100</b> |
-⭐ المستوى: <b id="level">1</b> (XP <b id="xp">0</b>/100)
+💰 كوينز: <b id="coins">1000</b>
+</div>
+
+<div class="card">
+اكتب قيمة الرهان:
 <br>
-✅ فوز: <b id="wins">0</b> | ❌ خسارة: <b id="losses">0</b>
+<input id="bet" type="number" min="1" placeholder="الرهان">
 </div>
 
-<div class="row">
-<select id="bet">
-  <option value="10">10</option>
-  <option value="25">25</option>
-  <option value="50">50</option>
-</select>
-<button onclick="allIn()">ALL IN 😈</button>
-<button onclick="openStore()">🛒 المتجر</button>
-<button onclick="daily()">🎁 مكافأة يومية</button>
+<div class="card">
+اختر حتى <b>6</b> عناصر فقط:
+<div class="row" id="items"></div>
+<p id="limit" style="color:#ff5252"></p>
 </div>
 
-<div id="wheel">❓</div>
-
-<div class="row">
-<button onclick="startSpin()">🎯 لف</button>
-<button onclick="autoPlay()">⏩ تلقائي</button>
+<div class="card">
+<button onclick="spin()">🎯 لف</button>
 </div>
 
-<div class="card" id="tasks">
-<b>🎯 مهام</b><br>
-<div id="taskText">لف 5 مرات</div>
-</div>
-
-<div class="card" id="log"></div>
-
-<!-- المتجر -->
-<div class="modal" id="store">
-  <div class="box">
-    <h3>🛒 متجر الكوينز (مجاني)</h3>
-    <p class="small">اضغط واستلم — بدون فلوس</p>
-    <div class="row">
-      <button onclick="freeCoins(100)">+100</button>
-      <button onclick="freeCoins(300)">+300</button>
-      <button onclick="freeCoins(1000)">+1000</button>
-    </div>
-    <hr>
-    <b>🎨 سكنات العجلة</b>
-    <div class="row">
-      <div class="skin active" onclick="setSkin('gold')">ذهبي</div>
-      <div class="skin" onclick="setSkin('blue')">أزرق</div>
-      <div class="skin" onclick="setSkin('red')">أحمر</div>
-    </div>
-    <br>
-    <button onclick="closeStore()">إغلاق</button>
-  </div>
-</div>
-
-<audio id="winSound" src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"></audio>
-<audio id="loseSound" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.wav"></audio>
+<div class="card" id="result"></div>
 
 <script>
-/* ====== الحالة ====== */
-let coins=+localStorage.getItem("coins")||100;
-let wins=+localStorage.getItem("wins")||0;
-let losses=+localStorage.getItem("losses")||0;
-let level=+localStorage.getItem("level")||1;
-let xp=+localStorage.getItem("xp")||0;
-let log=JSON.parse(localStorage.getItem("log")||"[]");
-let spins=+localStorage.getItem("spins")||0;
-let skin=localStorage.getItem("skin")||"gold";
-let lastDaily=+localStorage.getItem("daily")||0;
-let auto=false,rotation=0;
+let coins=1000;
+const maxSelect=6;
 
-/* ====== الجوائز ====== */
-const prizes=[
- {icon:"💀",mult:0,chance:30},
- {icon:"🍓",mult:2,chance:25},
- {icon:"🐟",mult:3,chance:20},
- {icon:"🍕",mult:5,chance:15},
- {icon:"🔥",mult:10,chance:7},
- {icon:"💎",mult:25,chance:3}
+const itemsData=[
+ {icon:"🍓",mult:5},
+ {icon:"🐟",mult:5},
+ {icon:"🍕",mult:5},
+ {icon:"🌽",mult:5},
+ {icon:"🥩",mult:10},
+ {icon:"🍇",mult:15},
+ {icon:"🔥",mult:25},
+ {icon:"💎",mult:45}
 ];
 
-/* ====== عناصر ====== */
-const coinsEl=coinsSpan=document.getElementById("coins"),
-winsEl=document.getElementById("wins"),
-lossesEl=document.getElementById("losses"),
-levelEl=document.getElementById("level"),
-xpEl=document.getElementById("xp"),
-betSel=document.getElementById("bet"),
-wheel=document.getElementById("wheel"),
-logDiv=document.getElementById("log"),
-taskText=document.getElementById("taskText"),
-store=document.getElementById("store"),
-winSound=document.getElementById("winSound"),
-loseSound=document.getElementById("loseSound");
+const itemsDiv=document.getElementById("items");
+const coinsEl=document.getElementById("coins");
+const limitEl=document.getElementById("limit");
+const resultEl=document.getElementById("result");
 
-/* ====== وظائف ====== */
-function save(){
- localStorage.setItem("coins",coins);
- localStorage.setItem("wins",wins);
- localStorage.setItem("losses",losses);
- localStorage.setItem("level",level);
- localStorage.setItem("xp",xp);
- localStorage.setItem("log",JSON.stringify(log));
- localStorage.setItem("spins",spins);
- localStorage.setItem("skin",skin);
+itemsData.forEach((it,i)=>{
+ const d=document.createElement("div");
+ d.className="item";
+ d.innerText=it.icon;
+ d.onclick=()=>toggle(d);
+ itemsDiv.appendChild(d);
+});
+
+function toggle(el){
+ const active=document.querySelectorAll(".item.active").length;
+ if(el.classList.contains("active")){
+   el.classList.remove("active");
+   limitEl.innerText="";
+ }else{
+   if(active>=maxSelect){
+     limitEl.innerText="❌ لا يمكن اختيار أكثر من 6";
+     return;
+   }
+   el.classList.add("active");
+ }
 }
-function updateUI(){
+
+function spin(){
+ const bet=parseInt(document.getElementById("bet").value);
+ const selected=[...document.querySelectorAll(".item.active")];
+
+ if(!bet || bet<=0) return alert("أدخل رهان صحيح");
+ if(bet>coins) return alert("الرهان أكبر من كوينزك");
+ if(selected.length===0) return alert("اختر عناصر");
+ if(selected.length>maxSelect) return;
+
+ coins-=bet;
+
+ const winItem=itemsData[Math.floor(Math.random()*itemsData.length)];
+ const win=selected.some(el=>el.innerText===winItem.icon);
+
+ if(win){
+   const prize=bet*winItem.mult;
+   coins+=prize;
+   resultEl.innerHTML=`🎉 فزت! ${winItem.icon} ×${winItem.mult}<br>+${prize}`;
+ }else{
+   resultEl.innerHTML=`❌ خسرت<br>العنصر الفائز ${winItem.icon}`;
+ }
+
  coinsEl.innerText=coins;
- winsEl.innerText=wins;
- lossesEl.innerText=losses;
- levelEl.innerText=level;
- xpEl.innerText=xp;
- wheel.style.borderColor = skin==="gold"?"gold":skin==="blue"?"#2196f3":"#f44336";
 }
-function getPrize(){
- let total=prizes.reduce((s,p)=>s+p.chance,0),r=Math.random()*total,sum=0;
- for(let p of prizes){sum+=p.chance;if(r<=sum)return p}
-}
-function addLog(t,type){
- log.unshift({t,type}); if(log.length>8) log.pop();
- logDiv.innerHTML="<b>آخر النتائج</b><br>"+log.map(l=>`<div class="${l.type}">${l.t}</div>`).join("");
- save();
-}
-function levelUp(){
- xp+=20;
- if(xp>=100){xp-=100;level++}
-}
-function taskCheck(){
- taskText.innerText = spins%5===0 ? "مهمة مكتملة! +50 كوينز" : "لف 5 مرات";
- if(spins%5===0){coins+=50}
-}
-function startSpin(){
- let bet=+betSel.value;
- if(coins<bet){auto=false;return alert("ما عندك كوينز");}
- coins-=bet; navigator.vibrate?.(80);
- const prize=getPrize();
- rotation+=720+Math.random()*360;
- wheel.style.transform=`rotate(${rotation}deg)`;
- setTimeout(()=>{
-  wheel.innerText=prize.icon;
-  spins++;
-  if(prize.mult>0){
-    let win=bet*prize.mult; coins+=win; wins++; levelUp();
-    winSound.play(); addLog(`ربح ×${prize.mult} +${win}`,"win");
-  }else{
-    losses++; loseSound.play(); addLog(`خسارة -${bet}`,"loss");
-  }
-  taskCheck(); updateUI(); save();
-  if(auto && coins>0) setTimeout(startSpin,1100); else auto=false;
- },2000);
-}
-function autoPlay(){ auto=!auto; if(auto) startSpin(); }
-function allIn(){ betSel.value=coins; }
-
-/* ====== المتجر ====== */
-function openStore(){ store.style.display="flex"; }
-function closeStore(){ store.style.display="none"; }
-function freeCoins(n){ coins+=n; updateUI(); save(); alert(`تم إضافة ${n} كوينز 🎉`); }
-function setSkin(s){
- skin=s; document.querySelectorAll('.skin').forEach(x=>x.classList.remove('active'));
- [...document.querySelectorAll('.skin')].find(x=>x.textContent.includes(
-  s==="gold"?"ذهبي":s==="blue"?"أزرق":"أحمر")).classList.add('active');
- updateUI(); save();
-}
-
-/* ====== يومية ====== */
-function daily(){
- const now=Date.now();
- if(now-lastDaily<24*60*60*1000) return alert("رجع بكرة 😉");
- coins+=200; lastDaily=now;
- localStorage.setItem("daily",lastDaily);
- updateUI(); save(); alert("استلمت 200 كوينز 🎁");
-}
-
-/* init */
-updateUI(); addLog("جاهز للعب 🎰","win");
 </script>
 
 </body>
